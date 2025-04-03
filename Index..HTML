@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hamim AI</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.3/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto Condensed', sans-serif;
+      background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+    }
+    .racing-stripe {
+      background: repeating-linear-gradient(
+        45deg,
+        #e53e3e,
+        #e53e3e 10px,
+        #dd6b20 10px,
+        #dd6b20 20px
+      );
+      height: 8px;
+    }
+    .typing-indicator:after {
+      content: '...';
+      animation: typing 1.5s infinite;
+    }
+    @keyframes typing {
+      0% { content: '.'; }
+      33% { content: '..'; }
+      66% { content: '...'; }
+    }
+    .engine-sound {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      opacity: 0.7;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .engine-sound:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    .hamim-logo {
+      font-weight: 800;
+      color: #3b82f6;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen text-gray-200">
+  <!-- Racing stripes at top -->
+  <div class="racing-stripe w-full"></div>
+  
+  <!-- Header with Hamim logo -->
+  <header class="bg-gray-900 py-4 px-6 flex items-center justify-center border-b border-gray-700">
+    <div class="flex items-center space-x-4">
+      <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-500">
+        <img src="https://iili.io/35APHMb.md.png" alt="Hamim AI" class="w-full h-full object-cover">
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold hamim-logo">HAMIM AI</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main chat area -->
+  <div class="flex-grow container mx-auto py-6 px-4">
+    <div class="h-full w-full max-w-2xl mx-auto">
+      <div id="chatbox" class="flex flex-col items-start overflow-y-auto h-full p-4 space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div class="sticky bottom-0 w-full bg-gray-900 pt-4 pb-6 border-t border-gray-700">
+    <div class="flex justify-center">
+      <div class="px-2 w-full max-w-2xl">
+        <div class="flex flex-col">
+          <div class="relative mb-3">
+            <input
+              class="bg-gray-800 text-white flex-grow rounded-lg p-4 pr-12 w-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              id="messageInput"
+              type="text"
+              placeholder="Ask me anything..."
+              autocomplete="off"
+            />
+            <div class="absolute right-3 top-3.5 text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </div>
+          </div>
+          <div class="flex justify-between space-x-2">
+            <button
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg w-full transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
+              id="sendButton"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
+              </svg>
+              SEND
+            </button>
+            <button
+              class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              id="clearButton"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatbox = document.getElementById("chatbox");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+    const clearButton = document.getElementById("clearButton");
+    const chatId = crypto.randomUUID();
+    let websocket = null;
+    let receiving = false;
+
+    // System prompt for the AI
+    const systemPrompt = "You are Hamim AI, a helpful and knowledgeable AI assistant. Provide clear, concise and accurate responses to user queries.";
+
+    // A function to create a message element based on the text and alignment
+    function createMessageElement(text, alignment) {
+      const messageElement = document.createElement("div");
+      
+      if (alignment === "left") {
+        messageElement.className = `flex items-start space-x-3`;
+        messageElement.innerHTML = `
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-500">
+              <img src="https://iili.io/35APHMb.md.png" alt="Hamim AI" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="bg-gray-800 p-4 rounded-lg rounded-tl-none max-w-xs sm:max-w-md border border-gray-700">
+            <p class="text-white">${text}</p>
+          </div>
+        `;
+      } else {
+        messageElement.className = `flex items-start justify-end space-x-3`;
+        messageElement.innerHTML = `
+          <div class="bg-blue-600 p-4 rounded-lg rounded-tr-none max-w-xs sm:max-w-md">
+            <p class="text-white">${text}</p>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-300 bg-gray-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+          </div>
+        `;
+      }
+      
+      return messageElement;
+    }
+
+    // A function to show typing indicator
+    function showTypingIndicator() {
+      const typingElement = document.createElement("div");
+      typingElement.className = `flex items-start space-x-3 typing-indicator`;
+      typingElement.innerHTML = `
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-500">
+            <img src="https://iili.io/35APHMb.md.png" alt="Hamim AI" class="w-full h-full object-cover">
+          </div>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-lg rounded-tl-none max-w-xs sm:max-w-md border border-gray-700">
+          <p class="text-white">Hamim AI is typing</p>
+        </div>
+      `;
+      chatbox.appendChild(typingElement);
+      chatbox.scrollTop = chatbox.scrollHeight;
+      return typingElement;
+    }
+
+    // A function to connect to the WebSocket server and send/receive messages
+    function connectWebSocket(message, initChat) {
+      receiving = true;
+      sendButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 animate-spin" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+        </svg>
+        CANCEL
+      `;
+      
+      const url = "wss://backend.buildpicoapps.com/api/chatbot/chat";
+      websocket = new WebSocket(url);
+
+      // Show typing indicator
+      const typingElement = showTypingIndicator();
+      const messageElement = typingElement.querySelector('.text-white');
+
+      websocket.addEventListener("open", () => {
+        websocket.send(
+          JSON.stringify({
+            chatId: chatId,
+            appId: "five-anything",
+            systemPrompt: systemPrompt,
+            message: initChat ? "Give me a very short welcome message as Hamim AI" : message,
+          })
+        );
+      });
+
+      websocket.onmessage = (event) => {
+        messageElement.textContent += event.data;
+        chatbox.scrollTop = chatbox.scrollHeight;
+      };
+
+      websocket.onclose = (event) => {
+        if (event.code === 1000) {
+          receiving = false;
+          sendButton.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
+            </svg>
+            SEND
+          `;
+        } else {
+          messageElement.textContent += "\n\n(Connection lost)";
+          chatbox.scrollTop = chatbox.scrollHeight;
+          receiving = false;
+          sendButton.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
+            </svg>
+            SEND
+          `;
+        }
+      };
+    }
+
+    // A function to create a welcome message when the chat starts
+    function createWelcomeMessage() {
+        connectWebSocket("", true);
+    }
+
+    // Event listeners
+    sendButton.addEventListener("click", () => {
+      if (!receiving && messageInput.value.trim() !== "") {
+        const messageText = messageInput.value.trim();
+        messageInput.value = "";
+        const messageElement = createMessageElement(messageText, "right");
+        chatbox.appendChild(messageElement);
+        chatbox.scrollTop = chatbox.scrollHeight;
+
+        connectWebSocket(messageText, false);
+      } else if (receiving && websocket) {
+        websocket.close(1000);
+      }
+    });
+
+    messageInput.addEventListener("keydown", (event) => {
+      if (
+        event.key === "Enter" &&
+        !receiving &&
+        messageInput.value.trim() !== ""
+      ) {
+        event.preventDefault();
+        sendButton.click();
+      }
+    });
+
+    clearButton.addEventListener("click", () => {
+      chatbox.innerHTML = "";
+      createWelcomeMessage();
+    });
+
+    // Initialize
+    createWelcomeMessage();
+  </script>
+</body>
+</html>
